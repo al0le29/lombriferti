@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lombriferti · Verificación de producto</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<meta name="theme-color" content="#2f7a3f">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="styles.css?v=24">
+<script src="theme.js?v=24"></script>
+</head>
+<body class="auth">
+<main class="auth-card" style="width:min(560px,100%)">
+  <div class="logo"><span class="leaf">🌿</span><div><b>Lombriferti</b><small>Composta hoy, un mejor mañana</small></div></div>
+  <div id="out"></div>
+  <p style="text-align:center;margin:18px 0 0"><a href="index.html" id="volver">← Volver</a></p>
+</main>
+<script src="sha.js?v=24"></script>
+<script>
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmt = iso => iso.split('-').reverse().join('/');
+const ico = t => /Humus/.test(t) ? '🪱' : /Composta/.test(t) ? '🍂' : '🌿';
+
+(async () => {
+  const q = new URLSearchParams(location.search), out = document.getElementById('out');
+  const lote = q.get('l') || '', tipo = q.get('t') || '', kg = q.get('k') || '', fecha = q.get('f') || '', h = q.get('h') || '';
+  if (!lote || !/^\d{4}-\d{2}-\d{2}$/.test(fecha) || !(+kg > 0)) {
+    out.innerHTML = '<div class="panel empty">⚠️<p>Este código QR no contiene datos de un producto válido.</p></div>';
+    return;
+  }
+  const full = await loteHash({ lote, tipo, kg, fecha, origen: q.get('o') || '' }, q.get('v') || ''), valid = full.slice(0, 12) === h;
+  const vv = /^\d{4}-\d{2}-\d{2}$/.test(q.get('v') || '') ? q.get('v') : null;   // fecha real de venta, si el QR la trae
+  /* Solo fechas reales: produccion y venta vienen en el QR; preparacion, envio y entrega se ven si el pedido esta guardado en este navegador */
+  let ped = null; try { ped = JSON.parse(localStorage.getItem('lf_orders') || '[]').find(x => x.id === q.get('p')); } catch (x) { }
+  const hst = (ped && ped.hist) || {}, org = q.get('o');
+  const st = [...(org ? [['♻️', 'Recepción de residuos', 'Ref. ' + org]] : []), ['🌱', 'Producción', fecha], ['🧑‍🌾', 'Venta', vv],
+    ...(ped ? [['📦', 'Preparación', hst.preparando || null], ['🚚', 'Envío', hst.enviado || null], ['🏡', 'Entrega', hst.entregado || null]] : [])];
+  out.innerHTML = `
+    <div class="panel ok" style="margin-bottom:14px"><span class="tick" style="${valid ? '' : 'background:#b3261e'}">${valid ? '✓' : '!'}</span>
+      <div><b>${valid ? 'Producto verificado' : 'No se pudo verificar'}</b><br><small class="mut">${valid ? 'Los datos del código coinciden con su huella digital.' : 'Los datos del código no coinciden con su huella. Podría haber sido alterado.'}</small></div></div>
+    <div class="panel">
+      <div style="font-size:42px;line-height:1">${ico(tipo)}</div>
+      <h2 style="margin:8px 0 12px">${esc(tipo || 'Producto Lombriferti')}</h2>
+      <dl class="receipt" style="margin:0">
+        <div><dt>Lote</dt><dd>${esc(lote)}</dd></div>
+        <div><dt>Peso por unidad</dt><dd>${esc(kg)} kg</dd></div>
+        <div><dt>Fecha de producción</dt><dd>${fmt(fecha)}</dd></div>
+      </dl>
+    </div>
+    <h2>Recorrido del lote</h2>
+    <div class="steps">${st.map(s => `<div class="step"><div class="c">${s[0]}</div><b>${s[1]}</b><small>${s[2] ? (/^\d{4}-/.test(s[2]) ? fmt(s[2]) : esc(s[2])) : s[1] === 'Venta' ? 'Sin ventas aún' : 'Pendiente'}</small></div>`).join('')}</div>
+    <div class="panel"><b>Huella del lote</b><div class="hash">${full}</div><small class="mut">Demostración: huella SHA-256 de los datos del lote. Detecta cambios en el enlace, pero una verificación real requeriría un servidor.</small></div>`;
+})();
+
+// "Volver": cierra esta pestaña para regresar a la pantalla de donde se abrio; si no se puede, regresa en el historial o al inicio del sitio.
+document.getElementById('volver').addEventListener('click', e => {
+  e.preventDefault();
+  const sameSite = document.referrer && new URL(document.referrer).origin === location.origin;
+  if (history.length > 1 && sameSite) return history.back();
+  window.close();
+  setTimeout(() => { try { sessionStorage.setItem('lf_noIntro', '1'); } catch (x) {} location.href = 'index.html'; }, 250);
+});
+</script>
+</body>
+</html>

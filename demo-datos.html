@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lombriferti · Datos de demostración</title>
+<style>body{font-family:system-ui,sans-serif;max-width:560px;margin:40px auto;padding:0 16px;color:#22372a;background:#f3f8f1}
+h1{font-size:24px}.card{background:#fff;border:1px solid #d9e6d6;border-radius:12px;padding:18px;margin:16px 0}
+button{font:inherit;font-weight:700;padding:11px 18px;border-radius:10px;border:0;background:#2f7a3f;color:#fff;cursor:pointer;margin:4px 6px 4px 0}
+button.g{background:#fff;color:#245f31;border:1px solid #2f7a3f}p{line-height:1.5}small{color:#566a5b}#st{font-weight:700}</style></head>
+<body>
+<h1>🌿 Datos de demostración</h1>
+<div class="card">
+<p>Esta página <b>no forma parte de la tienda</b>: solo sirve para llenar los reportes antes de una presentación. Úsala en el <b>mismo navegador y la misma dirección</b> donde abres la tienda.</p>
+<p>Agrega lotes (con prefijo <code>DEMO-</code>), pedidos de los últimos 6 meses, recepciones de residuos y gastos. Todo queda marcado como demostración y se quita con un clic, sin tocar tus datos reales.</p>
+<button id="on">Cargar datos de demostración</button><button id="off" class="g">Quitar datos de demostración</button>
+<p id="st" role="status"></p>
+<p><a href="index.html">← Ir a la tienda</a></p></div>
+<script>
+const g = k => { try { return JSON.parse(localStorage.getItem(k) || '[]'); } catch (e) { return []; } }, set = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+const pad = n => String(n).padStart(2, '0'), ymd = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+const count = () => g('lf_products').filter(x => x.demo).length + g('lf_orders').filter(x => x.demo).length + g('lf_waste').filter(x => x.demo).length + g('lf_costs').filter(x => x.demo).length;
+const show = t => { document.getElementById('st').textContent = t || (count() ? 'Hay datos de demostración cargados (' + count() + ' registros).' : 'No hay datos de demostración cargados.'); };
+function off() {
+  const p = g('lf_products').filter(x => !x.demo);
+  if (p.length) set('lf_products', p); else localStorage.removeItem('lf_products');   // sin productos reales, la tienda vuelve a cargar los suyos
+  set('lf_orders', g('lf_orders').filter(x => !x.demo)); set('lf_waste', g('lf_waste').filter(x => !x.demo)); set('lf_costs', g('lf_costs').filter(x => !x.demo));
+}
+function on() {
+  off();
+  const T = ['Lombriferti (fertilizante)', 'Composta tradicional', 'Humus de lombriz'], now = new Date(), rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+  const waste = [], costs = [], lots = [], orders = [];
+  for (let k = 5; k >= 0; k--) {
+    const m = new Date(now.getFullYear(), now.getMonth() - k, 1), mm = m.getFullYear() + '-' + pad(m.getMonth() + 1);
+    waste.push({ id: 'R-DEMO' + (6 - k), demo: 1, fecha: mm + '-04', prov: ['Mercado Central', 'Mercado Sur', 'Central de Abasto'][k % 3], tipo: 'Mezcla orgánica', kg: 120 + rnd(0, 90), costoKg: 0.5 });
+    costs.push({ id: 'CDEMO' + k, demo: 1, fecha: mm + '-09', concepto: ['Transporte', 'Lombrices', 'Sacos y etiquetas'][k % 3], monto: 250 + rnd(0, 400) });
+    lots.push({ demo: 1, lote: 'DEMO-' + (6 - k) + 'A', tipo: T[0], kg: 50, fecha: mm + '-06', precio: 120, stock: 0, desc: 'Lote de demostración.', origen: 'R-DEMO' + (6 - k) });
+    lots.push({ demo: 1, lote: 'DEMO-' + (6 - k) + 'B', tipo: T[(k % 2) + 1], kg: k % 2 ? 5 : 25, fecha: mm + '-07', precio: k % 2 ? 90 : 140, stock: 0, desc: 'Lote de demostración.', origen: 'R-DEMO' + (6 - k) });
+  }
+  let n = 0;
+  lots.forEach(l => {
+    const mm = l.fecha.slice(0, 7), cnt = rnd(2, 4);
+    for (let i = 0; i < cnt; i++) {
+      const day = rnd(8, 27), f = mm + '-' + pad(day); if (f > ymd(now)) continue;
+      const q = rnd(1, 4), age = (now - new Date(f)) / 864e5, estado = age > 12 ? 'entregado' : ['pendiente', 'preparando', 'enviado', 'entregado'][rnd(0, 3)];
+      orders.push({ id: 'DEMO' + (++n), demo: 1, fecha: f, email: 'cliente' + rnd(1, 5) + '@demo.mx', name: ['Ana López', 'Luis Pérez', 'María Ruiz', 'Carlos Díaz', 'Sofía Mora'][rnd(0, 4)], items: [{ lote: l.lote, qty: q, precio: l.precio, tipo: l.tipo, kg: l.kg }], subtotal: q * l.precio, envio: 0, total: q * l.precio, num: String(1e9 + n * 7919), pago: { metodo: 'efectivo', estado: 'pendiente' }, estado });
+    }
+    l.stock = rnd(0, 12);
+  });
+  orders.push({ ...orders[0], id: 'DEMOC', estado: 'cancelado', num: '1000000001' });
+  lots[3].stock = 2; lots[5].stock = 0;
+  set('lf_products', g('lf_products').concat(lots)); set('lf_orders', g('lf_orders').concat(orders)); set('lf_waste', g('lf_waste').concat(waste)); set('lf_costs', g('lf_costs').concat(costs));
+  if (!localStorage.getItem('lf_data_v')) localStorage.setItem('lf_data_v', '2');
+}
+document.getElementById('on').onclick = () => { on(); show('Listo: datos cargados (' + count() + ' registros). Abre Reportes como administrador.'); };
+document.getElementById('off').onclick = () => { off(); show('Datos de demostración quitados.'); };
+show();
+</script></body></html>

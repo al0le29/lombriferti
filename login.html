@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lombriferti · Iniciar sesión</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<meta name="theme-color" content="#2f7a3f">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="styles.css?v=24">
+<script src="theme.js?v=24"></script>
+<script src="intro.js?v=24"></script>
+</head>
+<body class="auth">
+<main class="auth-card">
+  <div class="auth-top">
+    <a class="back" href="index.html" aria-label="Volver al catálogo">←</a>
+    <span class="auth-brand">🌿 <b>Lombriferti</b></span>
+  </div>
+  <h1 id="title">Ingresa tu e-mail o teléfono para iniciar sesión</h1>
+  <p id="lead" class="sub" hidden>Completa tus datos para comprar y guardar tus pedidos.</p>
+
+  <form id="form" novalidate>
+    <div id="loginFields">
+      <label>E-mail o teléfono<input id="ident" autocomplete="username" autocapitalize="none" spellcheck="false"></label>
+    </div>
+
+    <div id="regFields" hidden>
+      <label>E-mail<input id="email" type="email" autocomplete="email" autocapitalize="none" spellcheck="false"></label>
+      <label>Teléfono
+        <span class="phone"><span class="cc"><svg width="22" height="15" viewBox="0 0 22 15" aria-hidden="true"><rect width="7.3" height="15" fill="#006847"/><rect x="7.3" width="7.4" height="15" fill="#fff"/><rect x="14.7" width="7.3" height="15" fill="#ce1126"/><circle cx="11" cy="7.5" r="2" fill="#8a6d3b"/></svg>+52</span>
+        <input id="phone" type="tel" inputmode="numeric" autocomplete="tel-national" maxlength="20"></span></label>
+      <label>Nombre<input id="name" autocomplete="name"></label>
+    </div>
+
+    <label>Contraseña
+      <span class="pw"><input id="pass" type="password" autocomplete="current-password" placeholder="Mínimo 6 caracteres">
+      <button type="button" class="eye" id="eye" aria-label="Mostrar contraseña" aria-pressed="false">
+        <svg id="eyeOn" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
+        <svg id="eyeOff" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M17.9 17.9A10.9 10.9 0 0 1 12 19c-7 0-11-7-11-7a19.6 19.6 0 0 1 5.1-5.9M9.9 5.2A10.4 10.4 0 0 1 12 5c7 0 11 7 11 7a19.7 19.7 0 0 1-3.2 4.2M1 1l22 22"/><path d="M14.1 14.1a3 3 0 1 1-4.2-4.2"/></svg>
+      </button></span></label>
+
+    <details id="roleRow" class="acode" hidden><summary>¿Tienes un código de administrador?</summary><label>Código de administrador<input id="acode" autocapitalize="characters" autocomplete="off" spellcheck="false"></label><small class="mut">Solo para el personal de Lombriferti. Sin código, la cuenta es de cliente.</small></details>
+
+    <p id="msg" class="msg" role="alert"></p>
+    <button class="btn" id="submit">Continuar</button>
+  </form>
+
+  <form id="fp" hidden novalidate>
+    <div id="fp1"><label>E-mail de tu cuenta<input id="fp_mail" type="email" autocomplete="email" autocapitalize="none" spellcheck="false"></label></div>
+    <div id="fp2" hidden>
+      <p class="demo" id="fp_code"></p>
+      <label>Código de 6 dígitos<input id="fp_c" inputmode="numeric" maxlength="6" autocomplete="one-time-code"></label>
+      <label>Nueva contraseña<input id="fp_p" type="password" autocomplete="new-password" placeholder="Mínimo 6 caracteres"></label>
+    </div>
+    <p id="fp_msg" class="msg" role="alert"></p>
+    <button class="btn" id="fp_go">Enviar código</button>
+  </form>
+  <p class="auth-alt"><button type="button" class="linkbtn" id="toggle">Crear cuenta</button></p>
+  <p class="auth-alt small"><button type="button" class="linkbtn" id="forgot">¿Olvidaste tu contraseña?</button></p>
+  <p class="auth-alt small"><a href="index.html">Explorar el catálogo sin iniciar sesión</a></p>
+</main>
+<script src="sha.js?v=24"></script>
+<script src="select.js?v=24"></script>
+<script>
+if (localStorage.getItem('lf_session')) location.replace('index.html');
+
+const $ = s => document.querySelector(s);
+let mode = 'login';
+const users = () => JSON.parse(localStorage.getItem('lf_users') || '[]');
+
+/* ---------- validaciones ---------- */
+const TLDS = new Set(['com', 'net', 'org', 'edu', 'gob', 'gov', 'mil', 'int', 'info', 'biz', 'name', 'pro', 'app', 'dev', 'io', 'xyz', 'online', 'site', 'shop', 'store', 'tech', 'cloud', 'mobi', 'asia', 'live', 'email', 'lat', 'blog', 'club', 'link', 'work', 'world', 'today', 'digital', 'company', 'studio', 'design', 'agency', 'news', 'life', 'center', 'group', 'solutions', 'services', 'network', 'systems', 'media', 'global', 'health', 'academy', 'education']);
+const TLD_TYPOS = { con: 1, cm: 1, cmo: 1, ocm: 1, om: 1, comm: 1, coom: 1, vom: 1, xom: 1, clom: 1, copm: 1, cim: 1, nte: 1, ner: 1, ogr: 1 };   // errores comunes al escribir .com, .net, .org
+const DOM_TYPOS = { 'gmial.com': 1, 'gmai.com': 1, 'gamil.com': 1, 'gmail.con': 1, 'gnail.com': 1, 'hotmial.com': 1, 'hotmal.com': 1, 'hotmai.com': 1, 'outlok.com': 1, 'outloook.com': 1, 'yaho.com': 1, 'yahooo.com': 1, 'iclod.com': 1, 'icloud.co': 1 };
+/* Devuelve '' si el correo es valido o el texto del problema (siempre el mismo, sin sugerencias). */
+function checkEmail(e) {
+  const MAL = 'El e-mail no es válido. Revísalo e inténtalo de nuevo.';
+  if (!/^[a-z0-9]+([._%+-][a-z0-9]+)*@([a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,}$/.test(e)) return MAL;
+  const dom = e.split('@')[1], tld = dom.split('.').pop();
+  if (DOM_TYPOS[dom] || TLD_TYPOS[tld]) return MAL;
+  if (tld.length > 2 && !TLDS.has(tld)) return MAL;
+  return '';
+}
+const normPhone = t => { let d = t.replace(/[\s().-]/g, '').replace(/^\+/, ''); if (!/^\d+$/.test(d)) return ''; if (/^521?\d{10}$/.test(d)) d = d.slice(-10); return /^\d{10}$/.test(d) ? d : ''; };
+
+/* ---------- interfaz ---------- */
+function setMode(m) {
+  mode = m; const reg = m === 'register';
+  $('#loginFields').hidden = reg; $('#regFields').hidden = !reg; $('#roleRow').hidden = !reg; $('#lead').hidden = !reg;
+  $('#title').textContent = reg ? 'Crea tu cuenta' : 'Ingresa tu e-mail o teléfono para iniciar sesión';
+  $('#toggle').textContent = reg ? 'Ya tengo cuenta' : 'Crear cuenta';
+  $('#pass').autocomplete = reg ? 'new-password' : 'current-password';
+  document.title = reg ? 'Lombriferti · Crear cuenta' : 'Lombriferti · Iniciar sesión';
+  fpClose(); clearErr(); $('#form').reset(); $('#roleRow').open = false; showPass(false);
+  ($(reg ? '#email' : '#ident')).focus();
+}
+$('#forgot').hidden = false;
+
+/* ---------- recuperar contraseña (demostración: sin servidor de correo, el código se muestra en pantalla) ---------- */
+let fpUser = null, fpCode = null, fpAt = 0;
+function fpClose() { $('#fp').hidden = true; $('#form').hidden = false; $('#toggle').hidden = false; $('#forgot').hidden = mode === 'register'; $('#fp1').hidden = false; $('#fp2').hidden = true; $('#fp_go').textContent = 'Enviar código'; $('#forgot').textContent = '¿Olvidaste tu contraseña?'; $('#fp_msg').textContent = ''; fpUser = fpCode = null; }
+$('#forgot').onclick = () => {
+  if (!$('#fp').hidden) return setMode('login');
+  mode = 'login'; $('#fp').hidden = false; $('#form').hidden = true; $('#forgot').textContent = '← Volver a iniciar sesión'; $('#toggle').hidden = true;
+  $('#title').textContent = 'Recupera tu contraseña'; $('#fp_mail').focus();
+};
+const fpErr = t => { $('#fp_msg').textContent = t; };
+$('#fp').addEventListener('submit', async e => {
+  e.preventDefault(); fpErr('');
+  if ($('#fp2').hidden) {
+    const mail = $('#fp_mail').value.trim().toLowerCase(), p = checkEmail(mail); if (p) return fpErr(p);
+    fpUser = users().find(x => x.email === mail); if (!fpUser) return fpErr('No encontramos una cuenta con ese e-mail.');
+    fpCode = String(Math.floor(100000 + Math.random() * 900000)); fpAt = Date.now();
+    $('#fp_code').textContent = '🔒 Demostración: como esta página no tiene servidor de correo, tu código es ' + fpCode + '. En la versión final llegaría a tu e-mail.';
+    $('#fp1').hidden = true; $('#fp2').hidden = false; $('#fp_go').textContent = 'Cambiar contraseña'; $('#fp_c').focus();
+  } else {
+    if (Date.now() - fpAt > 10 * 60000) return fpErr('El código venció. Vuelve a pedir uno.');
+    if ($('#fp_c').value.trim() !== fpCode) return fpErr('El código no es correcto.');
+    const np = $('#fp_p').value; if (np.length < 6) return fpErr('La contraseña debe tener al menos 6 caracteres.');
+    const list = users(), u = list.find(x => x.email === fpUser.email); u.hash = await sha(np); localStorage.setItem('lf_users', JSON.stringify(list));
+    setMode('login'); $('#msg').style.color = 'var(--gt)'; $('#msg').textContent = 'Contraseña actualizada. Ya puedes iniciar sesión.';
+  }
+});
+$('#toggle').onclick = () => setMode(mode === 'login' ? 'register' : 'login');
+function showPass(on) {
+  $('#pass').type = on ? 'text' : 'password'; $('#eyeOn').style.display = on ? 'none' : ''; $('#eyeOff').style.display = on ? '' : 'none';
+  $('#eye').setAttribute('aria-pressed', on); $('#eye').setAttribute('aria-label', on ? 'Ocultar contraseña' : 'Mostrar contraseña');
+}
+$('#eye').onclick = () => showPass($('#pass').type === 'password');
+$('#phone').oninput = e => { e.target.value = e.target.value.replace(/[^\d\s()+-]/g, ''); };
+function clearErr() { $('#msg').textContent = ''; $('#msg').style.color = ''; document.querySelectorAll('[aria-invalid]').forEach(i => i.removeAttribute('aria-invalid')); }
+document.querySelectorAll('#form input').forEach(i => i.addEventListener('input', clearErr));
+const err = (t, sel) => { $('#msg').textContent = t; if (sel) { $(sel).setAttribute('aria-invalid', 'true'); $(sel).focus(); } };
+
+/* ---------- enviar ---------- */
+$('#form').addEventListener('submit', async e => {
+  e.preventDefault(); clearErr();
+  const pass = $('#pass').value, list = users();
+  let u;
+
+  if (mode === 'login') {
+    const id = $('#ident').value.trim().toLowerCase();
+    if (!id) return err('Escribe tu e-mail o teléfono.', '#ident');
+    let by;
+    if (id.includes('@')) { const p = checkEmail(id); if (p) return err(p, '#ident'); by = x => x.email === id; }
+    else { const ph = normPhone(id); if (!ph) return err('Escribe un teléfono de 10 dígitos o un e-mail válido.', '#ident'); by = x => x.phone === ph; }
+    if (!pass) return err('Escribe tu contraseña.', '#pass');
+    const hash = await sha(pass);
+    u = list.find(x => by(x) && x.hash === hash);
+    if (!u) return err('E-mail, teléfono o contraseña incorrectos.');
+  } else {
+    const email = $('#email').value.trim().toLowerCase(), phone = normPhone($('#phone').value), name = $('#name').value.trim();
+    const pe = checkEmail(email);
+    if (pe) return err(pe, '#email');
+    if (!phone) return err('Escribe tu teléfono de 10 dígitos.', '#phone');
+    if (name.length < 2) return err('Escribe tu nombre.', '#name');
+    if (pass.length < 6) return err('La contraseña debe tener al menos 6 caracteres.', '#pass');
+    if (list.some(x => x.email === email)) return err('Ese e-mail ya tiene una cuenta. Inicia sesión.', '#email');
+    if (list.some(x => x.phone === phone)) return err('Ese teléfono ya tiene una cuenta. Inicia sesión.', '#phone');
+    const code = $('#acode').value.trim().toUpperCase();
+    if (code && code !== (localStorage.getItem('lf_admin_code') || 'LOMBRI-2026')) { $('#roleRow').open = true; return err('El código de administrador no es válido.', '#acode'); }
+    u = { name, email, phone, hash: await sha(pass), role: code ? 'Administrador' : 'Cliente' };
+    list.push(u); localStorage.setItem('lf_users', JSON.stringify(list));
+  }
+  localStorage.setItem('lf_session', JSON.stringify({ name: u.name, email: u.email, phone: u.phone || '', role: u.role, sid: addSession(u.email) }));
+  try { sessionStorage.setItem('lf_noIntro', '1'); } catch (x) {}
+  location.replace('index.html');
+});
+</script>
+</body>
+</html>
