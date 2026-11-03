@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lombriferti · Verificación de producto</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<meta name="theme-color" content="#2f7a3f">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="styles.css?v=31">
+<script src="theme.js?v=31"></script>
+</head>
+<body class="auth">
+<main class="auth-card" style="width:min(560px,100%)">
+  <div class="logo"><img class="brand-ic" src="icons/logo.png" alt=""><div><b><span class="wm"><span class="wm-a">Lombri</span><span class="wm-b">ferti</span></span></b><small>Transformamos residuos en cosechas</small></div></div>
+  <div id="out"></div>
+  <p style="text-align:center;margin:18px 0 0"><a href="index.html" id="volver">← Volver</a></p>
+</main>
+<script src="config.js?v=31"></script>
+<script src="api.js?v=31"></script>
+<script src="sha.js?v=31"></script>
+<script>
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmt = iso => iso.split('-').reverse().join('/');
+const ico = t => /Humus/.test(t) ? '🪱' : /Composta/.test(t) ? '🍂' : '🌿';
+const etapaIco = n => /residu/i.test(n) ? '♻️' : /produc/i.test(n) ? '🌱' : /transp|env/i.test(n) ? '🚚' : /distrib/i.test(n) ? '🏭' : /venta/i.test(n) ? '🧑‍🌾' : /entreg/i.test(n) ? '🏡' : '📍';
+const out = document.getElementById('out');
+const aviso = t => { out.innerHTML = `<div class="panel empty">⚠️<p>${t}</p></div>`; };
+
+/* Dibuja la verificacion. d = { codigo, tipo, kgPorUnidad, fechaProduccion, etapas:[{nombre, fecha, detalle}], huella, verificado, blockchain, nota } */
+function pintar(d) {
+  const ok = d.verificado !== false;
+  out.innerHTML = `
+    <div class="panel ok" style="margin-bottom:14px"><span class="tick" style="${ok ? '' : 'background:#b3261e'}">${ok ? '✓' : '!'}</span>
+      <div><b>${ok ? 'Producto verificado' : 'No se pudo verificar'}</b><br><small class="mut">${ok ? 'Este lote está registrado por Lombriferti.' : 'Los datos de este lote no coinciden con su registro. Podría haber sido alterado.'}</small></div></div>
+    <div class="panel">
+      <div style="font-size:42px;line-height:1">${ico(d.tipo)}</div>
+      <h2 style="margin:8px 0 12px">${esc(d.tipo || 'Producto Lombriferti')}</h2>
+      <dl class="receipt" style="margin:0">
+        <div><dt>Lote</dt><dd>${esc(d.codigo)}</dd></div>
+        <div><dt>Peso por unidad</dt><dd>${esc(d.kgPorUnidad)} kg</dd></div>
+        <div><dt>Fecha de producción</dt><dd>${fmt(d.fechaProduccion)}</dd></div>
+      </dl>
+    </div>
+    <h2>Recorrido del lote</h2>
+    <div class="steps">${(d.etapas || []).map(e => `<div class="step"><div class="c">${etapaIco(e.nombre)}</div><b>${esc(e.nombre)}</b><small>${e.fecha ? fmt(e.fecha) : e.detalle ? esc(e.detalle) : 'Pendiente'}</small></div>`).join('')}</div>
+    <div class="panel"><b>Huella del lote</b><div class="hash">${esc(d.huella || '—')}</div><small class="mut">${d.blockchain ? `Registrado en ${esc(d.blockchain.red || 'blockchain')}${d.blockchain.transaccion ? ' · transacción ' + esc(d.blockchain.transaccion) : ''}.` : esc(d.nota || 'Huella SHA-256 del lote guardada en el servidor.')}</small></div>`;
+}
+
+(async () => {
+  const q = new URLSearchParams(location.search), codigo = (q.get('l') || '').trim();
+  if (!codigo) return aviso('Este código QR no contiene un lote válido.');
+  if (API.online) {   // MODO SERVIDOR: GET /lotes/:codigo
+    out.innerHTML = '<div class="panel empty"><p>Verificando…</p></div>';
+    try { return pintar(await API.lotes.trazabilidad(codigo)); }
+    catch (e) { return aviso(e.status === 404 ? 'No encontramos el lote ' + esc(codigo) + '. Revisa que el código QR sea de Lombriferti.' : esc(e.message)); }
+  }
+  /* MODO LOCAL (demostración): solo se puede verificar en el navegador donde se registró el lote */
+  let lotes = [], ped = [];
+  try { lotes = JSON.parse(localStorage.getItem('lf_products') || '[]'); ped = JSON.parse(localStorage.getItem('lf_orders') || '[]'); } catch (x) { }
+  const p = lotes.find(x => x.lote === codigo);
+  if (!p) return aviso('Este lote no está en este navegador. En la versión de demostración el QR solo se verifica en el dispositivo donde se registró; con el servidor se verifica desde cualquier celular.');
+  const venta = ped.filter(o => o.estado !== 'cancelado' && o.items.some(i => i.lote === codigo)).map(o => o.fecha).sort()[0];
+  pintar({
+    codigo, tipo: p.tipo, kgPorUnidad: p.kg, fechaProduccion: p.fecha,
+    etapas: [...(p.origen ? [{ nombre: 'Recepción de residuos', detalle: 'Ref. ' + p.origen }] : []), { nombre: 'Producción', fecha: p.fecha }, { nombre: 'Primera venta', fecha: venta || null }],
+    huella: await loteHash(p, venta), nota: 'Demostración: huella calculada en este navegador. Con el servidor y la blockchain la verificación es real.',
+  });
+})();
+
+// "Volver": cierra esta pestaña para regresar a la pantalla de donde se abrio; si no se puede, regresa en el historial o al inicio del sitio.
+document.getElementById('volver').addEventListener('click', e => {
+  e.preventDefault();
+  const sameSite = document.referrer && new URL(document.referrer).origin === location.origin;
+  if (history.length > 1 && sameSite) return history.back();
+  window.close();
+  setTimeout(() => { try { sessionStorage.setItem('lf_noIntro', '1'); } catch (x) {} location.href = 'index.html'; }, 250);
+});
+</script>
+</body>
+</html>

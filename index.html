@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lombriferti</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<meta name="theme-color" content="#2f7a3f">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="styles.css?v=31">
+<script src="theme.js?v=31"></script>
+<script src="intro.js?v=31"></script>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="logo"><img class="brand-ic" src="icons/logo.png" alt=""><div><b><span class="wm"><span class="wm-a">Lombri</span><span class="wm-b">ferti</span></span></b><small>Transformamos residuos en cosechas</small></div></div>
+    <nav id="nav"></nav>
+  </aside>
+  <div class="main">
+    <header class="top">
+      <span class="mlogo"><img class="brand-ic sm" src="icons/logo.png" alt=""><b><span class="wm"><span class="wm-a">Lombri</span><span class="wm-b">ferti</span></span></b></span>
+      <button class="icon" id="cartBtn" title="Carrito" aria-label="Carrito" hidden>🛒<span class="badge" id="cartBadge" hidden></span></button>
+      <button class="icon" id="bell" title="Notificaciones" aria-label="Notificaciones">🔔<span class="badge" id="badge" hidden></span></button>
+      <span class="who"><span class="avatar" id="av"></span><span id="uname"></span></span>
+      <button class="btn ghost sm" id="logout">Salir</button>
+    </header>
+    <main id="view"></main>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="config.js?v=31"></script>
+<script src="api.js?v=31"></script>
+<script src="sha.js?v=31"></script>
+<script src="select.js?v=31"></script>
+<script src="extras.js?v=31"></script>
+<script src="tienda.js?v=31"></script>
+<script src="admin.js?v=31"></script>
+<script src="app.js?v=31"></script>
+</body>
+</html>
